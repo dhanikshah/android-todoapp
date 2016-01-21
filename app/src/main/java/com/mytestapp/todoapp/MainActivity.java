@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    // Read Items from file
     private void readItems() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo.txt");
@@ -90,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Write items to file
     private void writeItems() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo.txt");
