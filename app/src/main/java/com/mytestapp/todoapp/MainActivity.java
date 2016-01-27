@@ -12,11 +12,8 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import org.apache.commons.io.FileUtils;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private final int REQUEST_CODE = 0;
@@ -24,12 +21,14 @@ public class MainActivity extends AppCompatActivity {
     ArrayList<String> items;
     ArrayAdapter<String> itemsAdapter;
     ListView lvItems;
+    TodoItemDatabaseHelper databaseHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         lvItems = (ListView) findViewById(R.id.lvItems);
+        databaseHelper = TodoItemDatabaseHelper.getInstance(this);
         readItems();
         itemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items);
         lvItems.setAdapter(itemsAdapter);
@@ -43,15 +42,25 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
             String text = data.getExtras().getString("text");
             int pos = data.getExtras().getInt("position", -1);
+            String id = data.getStringExtra("id");
             if (pos < 0) {
                 return;
             }
+
+            ToDoItem newItem = new ToDoItem();
+            newItem.text = text;
+            newItem.id = id;
+            if (text.isEmpty()){
+                databaseHelper.deleteItem(newItem);
+            } else {
+                databaseHelper.updateItem(newItem);
+            }
+
             items.remove(pos);
             if (!text.isEmpty()) {
                 items.add(pos, text);
             }
             itemsAdapter.notifyDataSetChanged();
-            writeItems();
         }
     }
 
@@ -61,9 +70,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public boolean onItemLongClick(AdapterView<?> adapter,
                                                    View item, int pos, long id) {
+                        ToDoItem newItem = new ToDoItem();
+                        newItem.text = items.get(pos).toString();
+                        databaseHelper.deleteItem(newItem);
+
                         items.remove(pos);
                         itemsAdapter.notifyDataSetChanged();
-                        writeItems();
+
                         return true;
                     }
                 });
@@ -75,30 +88,21 @@ public class MainActivity extends AppCompatActivity {
                         Intent i = new Intent(MainActivity.this, EditItemActivity.class);
                         i.putExtra("text", adapter.getItemAtPosition(pos).toString());
                         i.putExtra("position", pos);
+
+                        ToDoItem newItem = new ToDoItem();
+                        newItem.text = items.get(pos).toString();
+                        i.putExtra("id", databaseHelper.getItemId(newItem));
                         startActivityForResult(i, REQUEST_CODE);
                     }
                 });
     }
 
-    // Read Items from file
+    // Read Items from SQLite Database
     private void readItems() {
-        File filesDir = getFilesDir();
-        File todoFile = new File(filesDir, "todo.txt");
-        try {
-            items = new ArrayList<String>(FileUtils.readLines(todoFile));
-        } catch (IOException e) {
-            items = new ArrayList<String>();
-        }
-    }
-
-    // Write items to file
-    private void writeItems() {
-        File filesDir = getFilesDir();
-        File todoFile = new File(filesDir, "todo.txt");
-        try {
-            FileUtils.writeLines(todoFile, items);
-        } catch (IOException e) {
-            e.printStackTrace();
+        List<ToDoItem> dbItemList = databaseHelper.getAllToDoItems();
+        items = new ArrayList<String>();
+        for (ToDoItem dbItem : dbItemList) {
+            items.add(dbItem.text);
         }
     }
 
@@ -130,7 +134,9 @@ public class MainActivity extends AppCompatActivity {
         if (!itemText.isEmpty()) {
             itemsAdapter.add(itemText);
             etNewItem.setText("");
-            writeItems();
+            ToDoItem newItem = new ToDoItem();
+            newItem.text = itemText;
+            databaseHelper.addItem(newItem);
         }
     }
 }
