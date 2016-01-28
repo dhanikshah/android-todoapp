@@ -1,7 +1,7 @@
 package com.mytestapp.todoapp;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -15,9 +15,7 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
-    private final int REQUEST_CODE = 0;
-    private final int RESULT_OK = 10;
+public class MainActivity extends AppCompatActivity implements EditItemDialogFragment.EditItemDialogListener {
     ArrayList<String> items;
     ArrayAdapter<String> itemsAdapter;
     ListView lvItems;
@@ -38,30 +36,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
-            String text = data.getExtras().getString("text");
-            int pos = data.getExtras().getInt("position", -1);
-            String id = data.getStringExtra("id");
-            if (pos < 0) {
-                return;
-            }
-
-            ToDoItem newItem = new ToDoItem();
-            newItem.text = text;
-            newItem.id = id;
-            if (text.isEmpty()){
-                databaseHelper.deleteItem(newItem);
-            } else {
-                databaseHelper.updateItem(newItem);
-            }
-
-            items.remove(pos);
-            if (!text.isEmpty()) {
-                items.add(pos, text);
-            }
-            itemsAdapter.notifyDataSetChanged();
+    public void onFinishEditDialog(String text, int pos, String id) {
+        if (pos < 0) {
+            return;
         }
+
+        ToDoItem newItem = new ToDoItem();
+        newItem.text = text;
+        newItem.id = id;
+        if (text.isEmpty()) {
+            databaseHelper.deleteItem(newItem);
+        } else {
+            databaseHelper.updateItem(newItem);
+        }
+
+        items.remove(pos);
+        if (!text.isEmpty()) {
+            items.add(pos, text);
+        }
+        itemsAdapter.notifyDataSetChanged();
     }
 
     private void setupListViewListener() {
@@ -72,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
                                                    View item, int pos, long id) {
                         ToDoItem newItem = new ToDoItem();
                         newItem.text = items.get(pos).toString();
+                        newItem.id = databaseHelper.getItemId(newItem);
                         databaseHelper.deleteItem(newItem);
 
                         items.remove(pos);
@@ -85,14 +79,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onItemClick(AdapterView<?> adapter,
                                                    View item, int pos, long id) {
-                        Intent i = new Intent(MainActivity.this, EditItemActivity.class);
-                        i.putExtra("text", adapter.getItemAtPosition(pos).toString());
-                        i.putExtra("position", pos);
-
                         ToDoItem newItem = new ToDoItem();
                         newItem.text = items.get(pos).toString();
-                        i.putExtra("id", databaseHelper.getItemId(newItem));
-                        startActivityForResult(i, REQUEST_CODE);
+
+                        FragmentManager fm = getSupportFragmentManager();
+                        EditItemDialogFragment editDialog = EditItemDialogFragment.newInstance(adapter.getItemAtPosition(pos).toString(),
+                                pos, databaseHelper.getItemId(newItem));
+                        editDialog.show(fm, "fragment_edit");
                     }
                 });
     }

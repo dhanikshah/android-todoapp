@@ -137,10 +137,10 @@ public class TodoItemDatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(KEY_ITEM_TEXT, item.text);
+        values.put(KEY_ITEM_ID, item.id);
 
-        return db.delete(TABLE_ITEM, KEY_ITEM_TEXT + " = ?",
-                new String[]{String.valueOf(item.text)});
+        return db.delete(TABLE_ITEM, KEY_ITEM_ID + " = ?",
+                new String[]{String.valueOf(item.id)});
     }
 
     public void deleteAllItems() {
